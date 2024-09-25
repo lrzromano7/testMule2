@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<file:config name="File_Config" doc:name="File Config" doc:id="bf3a4184-0eb2-449e-a105-06fa54c29369" >
+		<file:connection workingDir="C:\Users\LorenzoRomano\OneDrive - Lobra S.r.l\Desktop\Mulesoft clienti" />
+	</file:config>
+	<flow name="esercizioFlow" doc:id="e452a1b6-2201-44b8-96c1-54cd5eb08935" >
+		<scheduler doc:name="Scheduler" doc:id="27a59a6e-b4e2-4982-93f4-6cdfdd6abd6b" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="5" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<file:read doc:name="Read File" doc:id="51d806cb-552b-49ca-b433-9dc32da5bcf8" path="C:\Users\LorenzoRomano\OneDrive - Lobra S.r.l\Desktop\Mulesoft clienti\Mulesoft cliente 1.txt" config-ref="File_Config" target="readFile" outputMimeType="application/json"/>
+		<ee:transform doc:name="Transform Message" doc:id="054db7e6-1c75-438b-bfe4-afbbdcd2afa4" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="outputFiles" ><![CDATA[%dw 2.0
+output application/json
+---
+
+    inputs: vars.readFile.Data map (item, index)  -> {
+        inputAccount: {
+            MagentoID__c: item.MagentoID__c,
+            StoredenID__c: item.StoredenID__c,
+            FirstName: item.FirstName,
+            LastName: item.LastName,
+            PersonBirthdate: item.PersonBirthdate,
+            ("PersonMobilePhone" :item.PersonMobilePhone) if(!isEmpty(item.PersonMobilePhone)),
+            "NumeroTessera" : item.Numero_Tessera__c,
+            (Sesso__c: 
+                if (item.Sesso__c == "1") 
+                    "Male"
+                else if (item.Sesso__c == "2") 
+                    "Female"
+                else 
+                    null) if (!isEmpty(item.Sesso__c)),
+            PersonEmail: item.PersonEmail,
+            Phone: item.Phone,
+            BillingStreet: item.BillingAddress.street,
+            BillingPostalCode: item.BillingAddress.postalCode,
+            BillingCity: item.BillingAddress.city,
+            BillingStateCode: item.BillingAddress.state,
+            BillingCountryCode: item.BillingAddress.country,
+            Professione__c: item.Professione__c,
+            Interessi__c: item.Interessi__c,
+            Marketing_profilato__pc: item.Marketing_profilato__c,
+            Marketing_integrato__pc: item.Marketing_integrato__c,
+            Marketing_diretto__pc: item.Marketing_diretto__c,
+            Fidelity__c: item.Fidelity__c
+        }
+    }
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="ed40d180-a987-4844-98e9-7d6159f7d7f6" collection="#[vars.outputFiles.inputs]">
+			<file:write doc:name="Write" doc:id="508ba1e3-5bb2-4301-85fc-c86cacf32a93" config-ref="File_Config" path='#["C:\Users\LorenzoRomano\OneDrive - Lobra S.r.l\Desktop\Mulesoft clienti\Restituzione mulesoft clienti" ++ vars.counter ++ ".txt"]' mode="CREATE_NEW" createParentDirectories="false">
+				<file:content ><![CDATA[#[vars.outputFiles]]]></file:content>
+		</file:write>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="66a6b528-f026-495c-b8a0-3dd0e007e756" message="#[payload]"/>
+	</flow>
+</mule>
